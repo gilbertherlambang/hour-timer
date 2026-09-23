@@ -113,13 +113,6 @@ function addName() {
   render();
 }
 
-function removeName(name) {
-  savedNames = savedNames.filter((n) => n !== name);
-  saveNames();
-  if (selectedName === name) selectedName = savedNames[0] || null;
-  render();
-}
-
 function renderQuickNames() {
   quickNames.innerHTML = "";
 
@@ -137,14 +130,6 @@ function renderQuickNames() {
       render();
     });
     chip.appendChild(selectBtn);
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "chip-remove";
-    removeBtn.textContent = "×";
-    removeBtn.title = `Remove "${name}"`;
-    removeBtn.addEventListener("click", () => removeName(name));
-    chip.appendChild(removeBtn);
 
     quickNames.appendChild(chip);
   });
