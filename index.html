@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hour Timer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>⏱ Hour Timer</h1>
+      <p class="subtitle">Pick a name, run it for 1 hour, and keep a history of every run.</p>
+    </header>
+
+    <section class="new-timer">
+      <div id="quick-names" class="quick-names"></div>
+      <div class="duration-row">
+        <label for="timer-minutes">Duration (minutes)</label>
+        <input id="timer-minutes" type="number" min="1" max="600" value="60" />
+      </div>
+      <button id="start-btn">Start Timer</button>
+    </section>
+
+    <section class="active-timers">
+      <h2>Active Timers</h2>
+      <div id="active-groups" class="groups"></div>
+      <p id="active-empty" class="empty-state">No timers running.</p>
+    </section>
+
+    <section class="history">
+      <div class="history-header">
+        <h2>History</h2>
+        <button id="clear-history-btn" class="link-btn">Clear history</button>
+      </div>
+      <div id="history-groups" class="groups"></div>
+      <p id="history-empty" class="empty-state">No completed timers yet.</p>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <audio id="alarm-sound" preload="auto" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=" ></audio>
+
+  <script src="app.js"></script>
+</body>
+</html>
