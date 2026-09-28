@@ -9,8 +9,10 @@ const startBtn = document.getElementById("start-btn");
 const quickNames = document.getElementById("quick-names");
 const activeGroups = document.getElementById("active-groups");
 const activeEmpty = document.getElementById("active-empty");
+const historyFilters = document.getElementById("history-filters");
 const historyGroups = document.getElementById("history-groups");
 const historyEmpty = document.getElementById("history-empty");
+const HISTORY_PAGE_SIZE = 4;
 const clearHistoryBtn = document.getElementById("clear-history-btn");
 const toast = document.getElementById("toast");
 const alarmSound = document.getElementById("alarm-sound");
@@ -19,6 +21,8 @@ let activeTimers = loadJSON(STORAGE_KEYS.active, []);
 let history = loadJSON(STORAGE_KEYS.history, []);
 let savedNames = loadJSON(STORAGE_KEYS.names, ["BB", "Hellodev"]);
 let selectedName = savedNames[0] || null;
+let historyFilter = "today";
+let expandedGroups = new Set();
 let toastTimeout = null;
 
 if (window.Notification && Notification.permission === "default") {
@@ -66,6 +70,16 @@ function formatDateTime(ts) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function isToday(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
 
 function formatDuration(minutes) {
@@ -348,11 +362,37 @@ function buildHistoryTable(entries) {
   return table;
 }
 
-function renderHistory() {
-  historyGroups.innerHTML = "";
-  historyEmpty.hidden = history.length > 0;
+function renderHistoryFilters() {
+  historyFilters.innerHTML = "";
+  [
+    ["today", "Today"],
+    ["all", "All"],
+  ].forEach(([value, label]) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "filter-tab";
+    if (historyFilter === value) tab.classList.add("active");
+    tab.textContent = label;
+    tab.addEventListener("click", () => {
+      if (historyFilter === value) return;
+      historyFilter = value;
+      expandedGroups.clear();
+      renderHistory();
+    });
+    historyFilters.appendChild(tab);
+  });
+}
 
-  const groups = groupByName(history);
+function renderHistory() {
+  renderHistoryFilters();
+
+  historyGroups.innerHTML = "";
+  const visibleHistory = historyFilter === "today" ? history.filter((e) => isToday(e.startedAt)) : history;
+  historyEmpty.hidden = visibleHistory.length > 0;
+  historyEmpty.textContent =
+    historyFilter === "today" && history.length > 0 ? "No timers today yet." : "No completed timers yet.";
+
+  const groups = groupByName(visibleHistory);
   groups.forEach(([name, entries]) => {
     const completedCount = entries.filter((e) => e.status === "completed").length;
     const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0);
@@ -371,8 +411,25 @@ function renderHistory() {
     header.appendChild(title);
     header.appendChild(summary);
 
+    const expanded = expandedGroups.has(name);
+    const visibleEntries = expanded ? entries : entries.slice(0, HISTORY_PAGE_SIZE);
+
     block.appendChild(header);
-    block.appendChild(buildHistoryTable(entries));
+    block.appendChild(buildHistoryTable(visibleEntries));
+
+    if (entries.length > HISTORY_PAGE_SIZE) {
+      const toggleBtn = document.createElement("button");
+      toggleBtn.type = "button";
+      toggleBtn.className = "see-more-btn";
+      toggleBtn.textContent = expanded ? "Show less" : `See more (${entries.length - HISTORY_PAGE_SIZE})`;
+      toggleBtn.addEventListener("click", () => {
+        if (expanded) expandedGroups.delete(name);
+        else expandedGroups.add(name);
+        renderHistory();
+      });
+      block.appendChild(toggleBtn);
+    }
+
     historyGroups.appendChild(block);
   });
 }
