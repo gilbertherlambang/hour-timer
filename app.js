@@ -223,6 +223,11 @@ function completeTimer(id) {
   if (timer) notify(timer.name);
 }
 
+function markDoneTimer(id) {
+  finishTimer(id, "completed");
+  render();
+}
+
 // --- Grouping helper ---
 
 function groupByName(items) {
@@ -284,6 +289,13 @@ function buildTimerCard(timer) {
   cancelBtn.textContent = "Stop";
   cancelBtn.addEventListener("click", () => cancelTimer(timer.id));
   actions.appendChild(cancelBtn);
+
+  const doneBtn = document.createElement("button");
+  doneBtn.className = "icon-btn success";
+  doneBtn.textContent = "Done";
+  doneBtn.title = "Mark as completed without waiting for the countdown";
+  doneBtn.addEventListener("click", () => markDoneTimer(timer.id));
+  actions.appendChild(doneBtn);
 
   li.appendChild(info);
   li.appendChild(clock);

@@ -255,6 +255,7 @@ button#start-btn:hover {
 
 .timer-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-left: 12px;
 }
@@ -276,6 +277,11 @@ button#start-btn:hover {
 .icon-btn.danger:hover {
   border-color: var(--danger);
   color: var(--danger);
+}
+
+.icon-btn.success:hover {
+  border-color: var(--success);
+  color: var(--success);
 }
 
 .empty-state {
