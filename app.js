@@ -13,7 +13,6 @@ const historyFilters = document.getElementById("history-filters");
 const historyGroups = document.getElementById("history-groups");
 const historyEmpty = document.getElementById("history-empty");
 const HISTORY_PAGE_SIZE = 4;
-const clearHistoryBtn = document.getElementById("clear-history-btn");
 const toast = document.getElementById("toast");
 const alarmSound = document.getElementById("alarm-sound");
 
@@ -81,6 +80,22 @@ function isToday(ts) {
     d.getDate() === now.getDate()
   );
 }
+
+function isThisWeek(ts) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // week starts Monday
+  return ts >= start.getTime();
+}
+
+function isThisMonth(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
+const HISTORY_FILTERS = { today: isToday, week: isThisWeek, month: isThisMonth };
+const HISTORY_EMPTY = { today: "today", week: "this week", month: "this month" };
 
 function formatDuration(minutes) {
   const rounded = Math.round(minutes);
@@ -378,7 +393,8 @@ function renderHistoryFilters() {
   historyFilters.innerHTML = "";
   [
     ["today", "Today"],
-    ["all", "All"],
+    ["week", "This week"],
+    ["month", "This month"],
   ].forEach(([value, label]) => {
     const tab = document.createElement("button");
     tab.type = "button";
@@ -399,10 +415,10 @@ function renderHistory() {
   renderHistoryFilters();
 
   historyGroups.innerHTML = "";
-  const visibleHistory = historyFilter === "today" ? history.filter((e) => isToday(e.startedAt)) : history;
+  const visibleHistory = history.filter((e) => HISTORY_FILTERS[historyFilter](e.startedAt));
   historyEmpty.hidden = visibleHistory.length > 0;
   historyEmpty.textContent =
-    historyFilter === "today" && history.length > 0 ? "No timers today yet." : "No completed timers yet.";
+    history.length > 0 ? `No timers ${HISTORY_EMPTY[historyFilter]} yet.` : "No completed timers yet.";
 
   const groups = groupByName(visibleHistory);
   groups.forEach(([name, entries]) => {
@@ -471,15 +487,6 @@ startBtn.addEventListener("click", () => {
   const minutes = Math.max(1, Math.min(600, parseInt(minutesInput.value, 10) || 60));
   startTimer(selectedName, minutes);
   minutesInput.value = "60";
-});
-
-clearHistoryBtn.addEventListener("click", () => {
-  if (history.length === 0) return;
-  if (confirm("Clear all timer history? This can't be undone.")) {
-    history = [];
-    saveHistory();
-    render();
-  }
 });
 
 render();
