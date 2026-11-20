@@ -223,17 +223,17 @@ function buildListCard(list, section) {
       });
       menu.appendChild(b);
     };
-    item("Rename list", () => {
+    item("Rename", () => {
       const name = (window.prompt("Rename list:", list.name) || "").trim();
       if (name) list.name = name;
     });
-    item("Delete all completed tasks", () => {
+    item("Delete completed", () => {
       if (list.tasks.some((t) => t.done) && confirm("Delete all completed tasks in this list?")) {
         list.tasks = list.tasks.filter((t) => !t.done);
       }
     });
     item(
-      "Delete list",
+      "Delete",
       () => {
         if (confirm(`Delete "${list.name}" and all its tasks? This can't be undone.`)) {
           section.lists = section.lists.filter((l) => l.id !== list.id);
