@@ -297,13 +297,13 @@ function buildTimerCard(timer) {
     if (timer.paused) resumeTimer(timer.id);
     else pauseTimer(timer.id);
   });
-  actions.appendChild(pauseBtn);
 
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "icon-btn danger";
   cancelBtn.textContent = "Stop";
   cancelBtn.addEventListener("click", () => cancelTimer(timer.id));
   actions.appendChild(cancelBtn);
+  actions.appendChild(pauseBtn);
 
   const doneBtn = document.createElement("button");
   doneBtn.className = "icon-btn success";

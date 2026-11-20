@@ -588,7 +588,7 @@ tbody tr:last-child td {
   position: relative;
 }
 
-.icon-btn {
+.task-icon-btn {
   border: none;
   background: transparent;
   color: var(--muted);
@@ -599,7 +599,7 @@ tbody tr:last-child td {
   cursor: pointer;
 }
 
-.icon-btn:hover {
+.task-icon-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
 }

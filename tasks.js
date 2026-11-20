@@ -68,7 +68,7 @@ function el(tag, className, text) {
 }
 
 function iconBtn(label, text, onClick) {
-  const b = el("button", "icon-btn", text);
+  const b = el("button", "task-icon-btn", text);
   b.type = "button";
   b.title = label;
   b.setAttribute("aria-label", label);
