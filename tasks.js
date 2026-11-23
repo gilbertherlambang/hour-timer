@@ -54,6 +54,42 @@ function setDone(list, task, done) {
   }
 }
 
+// --- Drag to reorder (within a list, or onto another list) ---
+
+let dragState = null; // { taskId, listId }
+
+function findListById(id) {
+  for (const s of sections) {
+    const l = s.lists.find((x) => x.id === id);
+    if (l) return l;
+  }
+  return null;
+}
+
+function clearDropMarks() {
+  document.querySelectorAll(".drop-before, .drop-after").forEach((n) => n.classList.remove("drop-before", "drop-after"));
+}
+
+// Move a top-level task (with its subtasks) next to targetId in toList; no targetId appends to the end
+function moveTask(fromList, taskId, toList, targetId, after) {
+  const group = fromList.tasks.filter((t) => t.id === taskId || t.parentId === taskId);
+  if (group.length === 0 || targetId === taskId) return;
+  fromList.tasks = fromList.tasks.filter((t) => !group.includes(t));
+  let index = toList.tasks.length;
+  if (targetId) {
+    const ids = toList.tasks.map((t) => t.id);
+    const start = ids.indexOf(targetId);
+    if (start >= 0) {
+      index = start;
+      if (after) {
+        index = start + 1;
+        while (index < toList.tasks.length && toList.tasks[index].parentId === targetId) index++;
+      }
+    }
+  }
+  toList.tasks.splice(index, 0, ...group);
+}
+
 function deleteTask(list, task) {
   list.tasks = list.tasks.filter((t) => t.id !== task.id && t.parentId !== task.id);
 }
@@ -163,6 +199,43 @@ function buildTaskRow(list, task) {
     })
   );
   row.append(check, body, actions);
+
+  if (!task.done && !task.parentId) {
+    row.draggable = true;
+    row.addEventListener("dragstart", (e) => {
+      dragState = { taskId: task.id, listId: list.id };
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", task.id);
+      row.classList.add("dragging");
+    });
+    row.addEventListener("dragend", () => {
+      dragState = null;
+      row.classList.remove("dragging");
+      clearDropMarks();
+    });
+    row.addEventListener("dragover", (e) => {
+      if (!dragState || dragState.taskId === task.id) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = row.getBoundingClientRect();
+      const after = e.clientY > rect.top + rect.height / 2;
+      clearDropMarks();
+      row.classList.add(after ? "drop-after" : "drop-before");
+    });
+    row.addEventListener("drop", (e) => {
+      if (!dragState) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = row.getBoundingClientRect();
+      const after = e.clientY > rect.top + rect.height / 2;
+      const from = findListById(dragState.listId);
+      if (from) moveTask(from, dragState.taskId, list, task.id, after);
+      dragState = null;
+      clearDropMarks();
+      saveTasks();
+      renderTasks();
+    });
+  }
   return row;
 }
 
@@ -199,6 +272,19 @@ function makeRenamable(node, current, save) {
 function buildListCard(list, section) {
   const card = el("div", "task-card");
   card.dataset.id = list.id;
+  card.addEventListener("dragover", (e) => {
+    if (dragState) e.preventDefault();
+  });
+  card.addEventListener("drop", (e) => {
+    if (!dragState) return;
+    e.preventDefault();
+    const from = findListById(dragState.listId);
+    if (from) moveTask(from, dragState.taskId, list, null, false);
+    dragState = null;
+    clearDropMarks();
+    saveTasks();
+    renderTasks();
+  });
 
   const head = el("div", "task-card-head");
   head.appendChild(makeRenamable(el("h3", "task-card-title", list.name), list.name, (n) => (list.name = n)));

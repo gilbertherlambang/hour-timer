@@ -838,3 +838,15 @@ tbody tr:last-child td {
 .title-input:focus {
   outline: none;
 }
+
+.task-row.dragging {
+  opacity: 0.4;
+}
+
+.task-row.drop-before {
+  box-shadow: 0 -2px 0 var(--accent);
+}
+
+.task-row.drop-after {
+  box-shadow: 0 2px 0 var(--accent);
+}
