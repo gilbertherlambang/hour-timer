@@ -67,7 +67,42 @@ function findListById(id) {
 }
 
 function clearDropMarks() {
-  document.querySelectorAll(".drop-before, .drop-after").forEach((n) => n.classList.remove("drop-before", "drop-after"));
+  document
+    .querySelectorAll(".drop-before, .drop-after, .drop-card-before, .drop-card-after")
+    .forEach((n) => n.classList.remove("drop-before", "drop-after", "drop-card-before", "drop-card-after"));
+}
+
+// --- Drag a list card: reorder within a section or move to the other section ---
+
+let listDrag = null; // { listId }
+
+function findSectionOfList(id) {
+  return sections.find((s) => s.lists.some((l) => l.id === id)) || null;
+}
+
+// Move a list next to targetId in toSection; no targetId appends to the end
+function moveList(fromSection, listId, toSection, targetId, after) {
+  const list = fromSection.lists.find((l) => l.id === listId);
+  if (!list || targetId === listId) return;
+  fromSection.lists = fromSection.lists.filter((l) => l.id !== listId);
+  const idx = targetId ? toSection.lists.findIndex((l) => l.id === targetId) : -1;
+  if (idx < 0) toSection.lists.push(list);
+  else toSection.lists.splice(idx + (after ? 1 : 0), 0, list);
+}
+
+function dropList(toSection, targetId, after) {
+  const from = listDrag && findSectionOfList(listDrag.listId);
+  if (from) moveList(from, listDrag.listId, toSection, targetId, after);
+  listDrag = null;
+  clearDropMarks();
+  saveTasks();
+  renderTasks();
+}
+
+function listPercent(list) {
+  const total = list.tasks.length;
+  const done = list.tasks.filter((t) => t.done).length;
+  return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
 // Move a top-level task (with its subtasks) next to targetId in toList; no targetId appends to the end
@@ -262,6 +297,8 @@ function makeRenamable(node, current, save) {
       if (e.key === "Escape") finish(false);
     });
     input.addEventListener("blur", () => finish(true));
+    const draggableParent = node.closest("[draggable]");
+    if (draggableParent) draggableParent.draggable = false;
     node.replaceWith(input);
     input.focus();
     input.select();
@@ -272,10 +309,27 @@ function makeRenamable(node, current, save) {
 function buildListCard(list, section) {
   const card = el("div", "task-card");
   card.dataset.id = list.id;
+  const sideAfter = (e) => {
+    const r = card.getBoundingClientRect();
+    return e.clientX > r.left + r.width / 2;
+  };
   card.addEventListener("dragover", (e) => {
+    if (listDrag) {
+      e.preventDefault();
+      e.stopPropagation();
+      clearDropMarks();
+      if (listDrag.listId !== list.id) card.classList.add(sideAfter(e) ? "drop-card-after" : "drop-card-before");
+      return;
+    }
     if (dragState) e.preventDefault();
   });
   card.addEventListener("drop", (e) => {
+    if (listDrag) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropList(section, list.id, sideAfter(e));
+      return;
+    }
     if (!dragState) return;
     e.preventDefault();
     const from = findListById(dragState.listId);
@@ -287,7 +341,26 @@ function buildListCard(list, section) {
   });
 
   const head = el("div", "task-card-head");
-  head.appendChild(makeRenamable(el("h3", "task-card-title", list.name), list.name, (n) => (list.name = n)));
+  head.draggable = true;
+  head.addEventListener("dragstart", (e) => {
+    listDrag = { listId: list.id };
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", "list:" + list.id);
+    e.dataTransfer.setDragImage(card, 20, 20);
+    card.classList.add("dragging-card");
+  });
+  head.addEventListener("dragend", () => {
+    listDrag = null;
+    card.classList.remove("dragging-card");
+    clearDropMarks();
+  });
+
+  const { total, done, pct } = listPercent(list);
+  const titleBox = el("div", "task-card-titlebox");
+  const percent = el("span", "list-percent " + (pct > 70 ? "high" : pct > 30 ? "mid" : "low"), pct + "%");
+  percent.title = `${done} of ${total} tasks completed`;
+  titleBox.append(makeRenamable(el("h3", "task-card-title", list.name), list.name, (n) => (list.name = n)), percent);
+  head.appendChild(titleBox);
   const menuWrap = el("div", "menu-wrap");
   menuWrap.appendChild(
     iconBtn("List options", "⋮", () => {
@@ -410,6 +483,16 @@ function addListTo(section) {
 
 function buildSection(section) {
   const box = el("div", "board-section" + (section.collapsed ? " collapsed" : ""));
+  box.addEventListener("dragover", (e) => {
+    if (!listDrag) return;
+    e.preventDefault();
+    clearDropMarks();
+  });
+  box.addEventListener("drop", (e) => {
+    if (!listDrag) return;
+    e.preventDefault();
+    dropList(section, null, false);
+  });
 
   const head = el("div", "section-head");
   const toggle = el("button", "section-toggle", section.collapsed ? "▸" : "▾");

@@ -542,7 +542,8 @@ tbody tr:last-child td {
   gap: 14px;
   align-items: flex-start;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding: 0 10px 4px;
+  margin: 0 -10px;
 }
 
 .new-list-col {
@@ -563,6 +564,7 @@ tbody tr:last-child td {
 }
 
 .task-card {
+  position: relative;
   flex: 0 0 300px;
   min-height: 160px;
   background: #10131a;
@@ -843,10 +845,79 @@ tbody tr:last-child td {
   opacity: 0.4;
 }
 
-.task-row.drop-before {
-  box-shadow: 0 -2px 0 var(--accent);
+/* Straight insertion line across the row, not a shadow that follows the rounded corners */
+.task-row {
+  position: relative;
 }
 
-.task-row.drop-after {
-  box-shadow: 0 2px 0 var(--accent);
+.task-row.drop-before::before,
+.task-row.drop-after::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 0;
+}
+
+.task-row.drop-before::before {
+  top: -1.5px;
+}
+
+.task-row.drop-after::before {
+  bottom: -1.5px;
+}
+
+.task-card-head {
+  cursor: grab;
+}
+
+.task-card.dragging-card {
+  opacity: 0.4;
+}
+
+/* Straight insertion line in the gap beside the card, not a shadow that follows the rounded corners */
+.task-card.drop-card-before::before,
+.task-card.drop-card-after::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0;
+}
+
+.task-card.drop-card-before::before {
+  left: -8.5px;
+}
+
+.task-card.drop-card-after::before {
+  right: -8.5px;
+}
+
+.task-card-titlebox {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.list-percent {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.list-percent.low {
+  color: var(--muted);
+}
+
+.list-percent.mid {
+  color: #f5c542;
+}
+
+.list-percent.high {
+  color: var(--success);
 }
