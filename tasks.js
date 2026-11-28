@@ -37,8 +37,18 @@ function saveTasks() {
   localStorage.setItem(TASKS_KEY, JSON.stringify(sections));
 }
 
-function addTask(list, title, notes, parentId) {
-  list.tasks.push({ id: uid(), title, notes, done: false, parentId: parentId || null, createdAt: Date.now() });
+// New top-level tasks go to the top of the list; subtasks are added after their siblings
+function addTask(list, title, notes, parentId, today) {
+  const task = { id: uid(), title, notes, today: !!today, done: false, parentId: parentId || null, createdAt: Date.now() };
+  if (parentId) list.tasks.push(task);
+  else list.tasks.unshift(task);
+}
+
+function fireIcon() {
+  const span = el("span", "fire-icon");
+  span.innerHTML =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>';
+  return span;
 }
 
 function setDone(list, task, done) {
@@ -165,7 +175,21 @@ function buildEditor(list, task, parentId) {
   const save = el("button", "primary-btn", "Save");
   save.type = "submit";
   actions.append(cancel, save);
-  form.append(title, notes, actions);
+  let isToday = !!(task && task.today);
+  const fire = el("button", "fire-btn" + (isToday ? " on" : ""));
+  fire.type = "button";
+  fire.title = "Due today";
+  fire.setAttribute("aria-label", "Mark as due today");
+  fire.setAttribute("aria-pressed", String(isToday));
+  fire.appendChild(fireIcon());
+  fire.addEventListener("click", () => {
+    isToday = !isToday;
+    fire.classList.toggle("on", isToday);
+    fire.setAttribute("aria-pressed", String(isToday));
+  });
+  const titleRow = el("div", "title-row");
+  titleRow.append(title, fire);
+  form.append(titleRow, notes, actions);
 
   const close = () => {
     editor = null;
@@ -185,11 +209,12 @@ function buildEditor(list, task, parentId) {
     if (task) {
       task.title = t;
       task.notes = notes.value.trim();
+      task.today = isToday;
     } else {
-      addTask(list, t, notes.value.trim(), parentId);
+      addTask(list, t, notes.value.trim(), parentId, isToday);
     }
     saveTasks();
-    editor = parentId ? { listId: list.id, taskId: null, parentId } : { listId: list.id, taskId: null, parentId: null };
+    editor = null;
     renderTasks();
   });
   setTimeout(() => title.focus(), 0);
@@ -217,7 +242,30 @@ function buildTaskRow(list, task) {
     renderTasks();
   });
 
+  const toggleToday = () => {
+    task.today = !task.today;
+    saveTasks();
+    renderTasks();
+  };
+  let todayBadge = null;
   const actions = el("div", "task-actions");
+  if (!task.done) {
+    const fire = el("button", "fire-btn" + (task.today ? " on" : ""));
+    fire.type = "button";
+    fire.title = task.today ? "Remove due today" : "Mark as due today";
+    fire.setAttribute("aria-label", fire.title);
+    fire.appendChild(fireIcon());
+    if (task.today) {
+      fire.appendChild(el("span", "fire-label", "Today"));
+      todayBadge = fire;
+    } else {
+      actions.appendChild(fire);
+    }
+    fire.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleToday();
+    });
+  }
   if (!task.parentId && !task.done) {
     actions.appendChild(
       iconBtn("Add a subtask", "↳", () => {
@@ -233,6 +281,7 @@ function buildTaskRow(list, task) {
       renderTasks();
     })
   );
+  if (todayBadge) body.appendChild(todayBadge);
   row.append(check, body, actions);
 
   if (!task.done && !task.parentId) {

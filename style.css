@@ -921,3 +921,73 @@ tbody tr:last-child td {
 .list-percent.high {
   color: var(--success);
 }
+
+/* --- Due today (fire) --- */
+
+.fire-icon {
+  display: inline-flex;
+}
+
+.fire-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+}
+
+.task-body .fire-btn {
+  margin-top: 4px;
+  padding: 2px 8px 2px 0;
+}
+
+.task-body .fire-btn:hover {
+  background: transparent;
+}
+
+.fire-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.fire-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5c542;
+}
+
+.fire-btn.on {
+  color: #f5c542;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.title-row .task-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.title-row .fire-btn {
+  padding: 8px;
+}
+
+/* In the form the icon must read as on/off even while the pointer is still over it */
+.title-row .fire-btn:not(.on):hover {
+  color: var(--muted);
+}
