@@ -79,7 +79,7 @@ function findListById(id) {
 function clearDropMarks() {
   document
     .querySelectorAll(".drop-before, .drop-after, .drop-card-before, .drop-card-after")
-    .forEach((n) => n.classList.remove("drop-before", "drop-after", "drop-card-before", "drop-card-after"));
+    .forEach((n) => n.classList.remove("drop-before", "drop-after", "drop-wide", "drop-card-before", "drop-card-after"));
 }
 
 // --- Drag a list card: reorder within a section or move to the other section ---
@@ -115,23 +115,20 @@ function listPercent(list) {
   return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
-// Move a top-level task (with its subtasks) next to targetId in toList; no targetId appends to the end
+// Move a task next to targetId in toList. A top-level task takes its subtasks along. Dropping next to a
+// subtask makes the moved subtask a sibling of it; next to a top-level task makes it top-level. No targetId
+// appends to the end as a top-level task.
 function moveTask(fromList, taskId, toList, targetId, after) {
-  const group = fromList.tasks.filter((t) => t.id === taskId || t.parentId === taskId);
-  if (group.length === 0 || targetId === taskId) return;
+  const task = fromList.tasks.find((t) => t.id === taskId);
+  if (!task || targetId === taskId) return;
+  const children = fromList.tasks.filter((t) => t.parentId === taskId);
+  if (children.some((c) => c.id === targetId)) return;
+  const group = [task, ...children];
   fromList.tasks = fromList.tasks.filter((t) => !group.includes(t));
+  const target = targetId ? toList.tasks.find((t) => t.id === targetId) : null;
+  task.parentId = target ? target.parentId : null;
   let index = toList.tasks.length;
-  if (targetId) {
-    const ids = toList.tasks.map((t) => t.id);
-    const start = ids.indexOf(targetId);
-    if (start >= 0) {
-      index = start;
-      if (after) {
-        index = start + 1;
-        while (index < toList.tasks.length && toList.tasks[index].parentId === targetId) index++;
-      }
-    }
-  }
+  if (target) index = toList.tasks.indexOf(target) + (after ? 1 : 0);
   toList.tasks.splice(index, 0, ...group);
 }
 
@@ -284,9 +281,25 @@ function buildTaskRow(list, task) {
   if (todayBadge) body.appendChild(todayBadge);
   row.append(check, body, actions);
 
-  if (!task.done && !task.parentId) {
+  row.dataset.id = task.id;
+  if (task.parentId) row.dataset.parent = task.parentId;
+
+  if (!task.done) {
     row.draggable = true;
+    const dragged = () => {
+      if (!dragState) return null;
+      const from = findListById(dragState.listId);
+      return from ? { from, task: from.tasks.find((t) => t.id === dragState.taskId) } : null;
+    };
+    // A task that has subtasks can't become a subtask, so it can only be dropped next to top-level tasks
+    const canDropHere = () => {
+      const d = dragged();
+      if (!d || !d.task || d.task.id === task.id) return false;
+      if (task.parentId && d.from.tasks.some((t) => t.parentId === d.task.id)) return false;
+      return true;
+    };
     row.addEventListener("dragstart", (e) => {
+      e.stopPropagation();
       dragState = { taskId: task.id, listId: list.id };
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", task.id);
@@ -298,18 +311,32 @@ function buildTaskRow(list, task) {
       clearDropMarks();
     });
     row.addEventListener("dragover", (e) => {
-      if (!dragState || dragState.taskId === task.id) return;
-      e.preventDefault();
+      if (!dragState) return;
       e.stopPropagation();
+      if (!canDropHere()) return;
+      e.preventDefault();
       const rect = row.getBoundingClientRect();
       const after = e.clientY > rect.top + rect.height / 2;
       clearDropMarks();
-      row.classList.add(after ? "drop-after" : "drop-before");
+      let markRow = row;
+      let cls = after ? "drop-after" : "drop-before";
+      if (after && !task.parentId) {
+        // Below a top-level task its subtasks come first, so draw the full-width line under the last one
+        const subs = [...row.parentElement.querySelectorAll(`[data-parent="${task.id}"]`)].filter(
+          (r) => !r.classList.contains("dragging")
+        );
+        if (subs.length) {
+          markRow = subs[subs.length - 1];
+          cls += " drop-wide";
+        }
+      }
+      cls.split(" ").forEach((c) => markRow.classList.add(c));
     });
     row.addEventListener("drop", (e) => {
       if (!dragState) return;
-      e.preventDefault();
       e.stopPropagation();
+      if (!canDropHere()) return;
+      e.preventDefault();
       const rect = row.getBoundingClientRect();
       const after = e.clientY > rect.top + rect.height / 2;
       const from = findListById(dragState.listId);

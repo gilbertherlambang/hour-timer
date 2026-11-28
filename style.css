@@ -991,3 +991,7 @@ tbody tr:last-child td {
 .title-row .fire-btn:not(.on):hover {
   color: var(--muted);
 }
+
+.task-row.sub.drop-wide::before {
+  left: -30px;
+}
